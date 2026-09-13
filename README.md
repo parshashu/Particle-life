@@ -1,103 +1,103 @@
 # Particle Life Simulation
 
-This is a particle-based life simulation implemented. The simulation demonstrates the interaction between different particles based on predefined forces. Each particle type interacts with others through attraction or repulsion, resulting in dynamic and emergent behavior.
+Particle-based molecular-dynamics toy model: four species interact through a force matrix of attraction and repulsion. Simple pairwise rules produce collective, cell-like clusters.
+
+This was written as a biophysics course project. The live simulation is in Pygame; screenshots and recordings from the original runs are in [`media/`](media/).
+
+## Gallery
+
+Cell-like clusters from a hand-tuned force matrix:
+
+![Cell-like clusters](media/cells.png)
+
+Snake-like chain formed under a different force matrix:
+
+![Snake-like chain](media/snake.png)
+
+Force-matrix overlay during a live run:
+
+![Live screenshot](media/screenshot.png)
+
+- [Introduction](media/introduction.mp4)
+- [Full simulation](media/particle_life.mp4)
+- [Cluster formation](media/cluster_formation.mp4)
 
 ## Features
-Particle Simulation: Simulates the movement and interaction of particles.
-Force Matrix: Defines the attraction or repulsion between different particle types.
-Spatial Partitioning: Efficiently calculates forces using spatial partitioning to handle a large number of particles.
-Visualization: Displays the particles and the force matrix in real-time.
-Requirements
-Python 3.7+
-Pygame 2.0+
 
+- Pairwise attraction–repulsion between four particle species
+- Tunable or random force matrix
+- Spatial partitioning so force updates stay interactive at hundreds of particles
+- Periodic (wrap-around) boundaries
+- Live force-matrix overlay
 
-## Install the required packages:
-pip install pygame
-Usage
-Run the simulation:
+## Requirements
 
+- Python 3.8+
+- Pygame 2.0+
 
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+```bash
 python main.py
-Configuration
-Force Matrix
-The force matrix defines the interaction between different particle types. You can modify the force values in the 
+```
 
+`particle_life.py` is a thin wrapper around the same entry point.
 
-## FORCE_MATRIX dictionary:
-FORCE_MATRIX = {
-    PARTICLE_COLORS[0]: {PARTICLE_COLORS[0]: -0.1, PARTICLE_COLORS[1]: -0.05, PARTICLE_COLORS[2]: 0, PARTICLE_COLORS[3]: 0},
-    PARTICLE_COLORS[1]: {PARTICLE_COLORS[0]: 0.04, PARTICLE_COLORS[1]: -0.1, PARTICLE_COLORS[2]: -0.06, PARTICLE_COLORS[3]: 0},
-    PARTICLE_COLORS[2]: {PARTICLE_COLORS[0]: 0, PARTICLE_COLORS[1]: 0.05, PARTICLE_COLORS[2]: -0.1, PARTICLE_COLORS[3]: -0.07},
-    PARTICLE_COLORS[3]: {PARTICLE_COLORS[0]: 0, PARTICLE_COLORS[1]: 0, PARTICLE_COLORS[2]: 0.06, PARTICLE_COLORS[3]: -0.1},
+To try a random force matrix instead of the default cell-forming one:
+
+```python
+from particlelife.app import run
+from particlelife.config import SimulationConfig
+
+run(SimulationConfig.with_random_forces(seed=8))
+```
+
+## Layout
+
+```
+main.py                 # Pygame entry point
+particle_life.py        # backward-compatible launcher
+particlelife/
+  config.py             # colors, distances, force matrix
+  particle.py           # particle state and wrapping
+  forces.py             # pairwise force law
+  spatial.py            # grid used for neighbor search
+  simulation.py         # time stepping
+  render.py             # force-matrix overlay
+  app.py                # event loop
+media/                  # screenshots and recordings
+```
+
+## Configuration
+
+Edit `particlelife/config.py` or pass a `SimulationConfig`:
+
+| Parameter | Role |
+| --- | --- |
+| `width`, `height` | Window size |
+| `num_particles` | Population |
+| `particle_colors` | Species colors |
+| `force_matrix` | Attraction (+) / repulsion (−) between species |
+| `min_distance`, `max_distance` | Short-range core repulsion and interaction cutoff |
+| `friction` | Velocity damping each step |
+| `repulsive_force` | Extra push when particles overlap |
+| `seed` | Reproducible initial positions |
+
+Default force matrix (yellow, cyan, magenta, green):
+
+```python
+{
+    YELLOW:  {YELLOW: -0.1, CYAN: -0.05, MAGENTA:  0.00, GREEN:  0.00},
+    CYAN:    {YELLOW:  0.04, CYAN: -0.10, MAGENTA: -0.06, GREEN:  0.00},
+    MAGENTA: {YELLOW:  0.00, CYAN:  0.05, MAGENTA: -0.10, GREEN: -0.07},
+    GREEN:   {YELLOW:  0.00, CYAN:  0.00, MAGENTA:  0.06, GREEN: -0.10},
 }
-
-
-## Simulation Parameters
-You can adjust various parameters to change the behavior of the simulation:
-
-WIDTH, HEIGHT: Screen dimensions.
-BACKGROUND_COLOR: Background color of the simulation.
-PARTICLE_COLORS: List of colors representing different particle types.
-NUM_PARTICLES: Number of particles in the simulation.
-MIN_DISTANCE, MAX_DISTANCE: Distance thresholds for force calculations.
-FRICTION: Friction factor applied to particle movement.
-REPULSIVE_FORCE: Strength of repulsive force when particles are too close.
-Particle Class
-The Particle class represents individual
-
-
-## particles in the simulation:
-class Particle:
-    def __init__(self, x, y, radius, color):
-        self.x = x
-        self.y = y
-        self.radius = radius
-        self.color = color
-        self.vx = 0  # Initial velocity set to 0
-        self.vy = 0  # Initial velocity set to 0
-
-    def move(self):
-        self.vx *= FRICTION  # Applying friction to velocity
-        self.vy *= FRICTION  # Applying friction to velocity
-        self.x += self.vx
-        self.y += self.vy
-
-        # Wrap around edges
-        if self.x < 0:
-            self.x += WIDTH
-        elif self.x > WIDTH:
-            self.x -= WIDTH
-        if self.y < 0:
-            self.y += HEIGHT
-        elif self.y > HEIGHT:
-            self.y -= HEIGHT
-
-    def apply_force(self, fx, fy):
-        self.vx += fx
-        self.vy += fy
-
-    def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
-
-
-## Spatial Partitioning
-The spatial partitioning technique is used to optimize the force calculations between particles:
-
-def spatial_partition(particles, cell_size):
-    grid_size_x = (WIDTH // cell_size) + 1
-    grid_size_y = (HEIGHT // cell_size) + 1
-    grid = defaultdict(list)
-    for particle in particles:
-        cell = (int(particle.x // cell_size), int(particle.y // cell_size))
-        grid[cell].append(particle)
-    return grid, grid_size_x, grid_size_y
-
+```
 
 ## Acknowledgements
-Inspired by various particle life simulations and the emergent behavior of interacting particles.
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request or open an issue to discuss changes.
-
-
+Inspired by particle-life simulations and the emergent behavior of interacting particles.
